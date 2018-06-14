@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+  <style>
+  </style>
+</head>
+<body>
+<canvas id="c" width="1000" height="600"
+        style="border: 1px solid #F00; float: left; width: 100px; height: 200px;"></canvas>
+<button id="eraser-btn">current mode: free draw</button>
+<script src="js/lodash.js"></script>
+<script src="js/jquery.min.js"></script>
+<script src="js/fabric2.3.2.js"></script>
+<script>
+  var {isNumber, filter, map, isFinite, isNaN} = _
+
+  var canvas = new fabric.Canvas('c')
+  canvas.isDrawingMode = true
+  canvas.selection = false
+  fabric.Object.prototype.transparentCorners = false;
+
+  var isMouseDown = false
+  var isEraserMode = false
+
+  fabric.util.addListener(fabric.document, 'mousedown', e => {
+    isMouseDown = true
+  })
+
+  fabric.util.addListener(fabric.document, 'mouseup', e => {
+    isMouseDown = false
+  })
+
+  canvas.on('path:created', opt => {
+    var shape = opt.path
+    canvas.remove(shape)
+    var path = new fabric.Path(getPathStr(shape), {
+      strokeLineCap: 'round',
+      strokeLineJoin: 'round',
+      fill: null,
+      stroke: shape.stroke,
+      strokeWidth: shape.strokeWidth,
+      hasControls: false,
+      hasBorders: false,
+      selectable: false,
+    })
+    canvas.add(path)
+  })
+
+  canvas.on('mouse:move', opt => {
+    if (isMouseDown && opt.target && opt.target.path && isEraserMode) {
+      canvas.remove(opt.target)
+    }
+  })
+
+  $('#eraser-btn').click(function () {
+    isEraserMode = !isEraserMode
+    if (isEraserMode) {
+      $(this).html('current mode: erase')
+      canvas.isDrawingMode = false
+    } else {
+      $(this).html('current mode: free draw')
+      canvas.isDrawingMode = true
+    }
+  })
+
+  function getPathStr(pathShape) {
+    var pathData = pathShape.path || []
+    var len = pathData.length
+    var p1 = null
+    var p2 = null
+    var pathArr = filter(pathData, function (item, index) {
+      if (index === 0 || index === len - 1) {
+        return true
+      } else if (index === 1) {
+        p1 = item
+        return true
+      } else if (index === 2) {
+        p2 = item
+        return true
+      }
+
+      var saved = checkCurVature(p1, p2, item)
+
+      if (saved) {
+        p1 = p2
+        p2 = item
+      }
+      return saved
+    })
+
+    pathArr = map(pathArr, function (item, index) {
+      return item.map(function (subItem) {
+        if (isNumber(subItem)) {
+          return Math.round(subItem)
+        }
+        return subItem
+      })
+    })
+
+    len = pathArr.length
+    pathArr = filter(pathArr, function (item, index) {
+      if (index === 0 || index === len - 1) {
+        return true
+      }
+      return index % 2 === 0
+    })
+
+    return pathArr.join(' ').replace(/,/g, ' ')
+  }
+
+  function checkCurVature(qPoint1, qPoint2, qPoint3) {
+    // 贝塞尔曲线起点与终点的曲率
+    var c1 = (qPoint2[2] - qPoint1[4]) / (qPoint2[1] - qPoint1[3])
+    var c2 = (qPoint3[2] - qPoint2[4]) / (qPoint3[1] - qPoint2[3])
+    var ac1 = Math.abs(c1)
+    var ac2 = Math.abs(c2)
+    var min = Math.max(ac2, ac1)
+
+    if (!isFinite(c1)) {
+      return true
+    }
+
+    if (!isFinite(c2)) {
+      if ((Math.abs(qPoint3[2] - qPoint2[2]) <= 2)) {
+        return false
+      }
+
+      return true
+    }
+
+    var result = Math.abs(c2 - c1) / min
+
+    if (isNaN(result)) {
+      return false
+    }
+
+    return result > 0.12
+  }
+</script>
+
+</body>
+</html>

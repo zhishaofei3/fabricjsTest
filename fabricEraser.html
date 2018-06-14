@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+  <style>
+  </style>
+</head>
+<body>
+<canvas id="c" width="1000" height="600"
+        style="border: 1px solid #F00; float: left; width: 100px; height: 200px;"></canvas>
+<button id="eraser-btn">current mode: free draw</button>
+<script src="js/jquery.min.js"></script>
+<script src="js/fabric2.3.2.js"></script>
+<script>
+  var canvas = new fabric.Canvas('c')
+  canvas.isDrawingMode = true
+  canvas.selection = false
+  fabric.Object.prototype.transparentCorners = false;
+
+  var isMouseDown = false
+  var isEraserMode = false
+
+  fabric.util.addListener(fabric.document, 'mousedown', e => {
+    isMouseDown = true
+  })
+
+  fabric.util.addListener(fabric.document, 'mouseup', e => {
+    isMouseDown = false
+  })
+
+  canvas.on('mouse:move', opt => {
+    if (isMouseDown && opt.target && opt.target.path && isEraserMode) {
+      canvas.remove(opt.target)
+    }
+  })
+
+  $('#eraser-btn').click(function () {
+    isEraserMode = !isEraserMode
+    if (isEraserMode) {
+      $(this).html('current mode: erase')
+      canvas.isDrawingMode = false
+    } else {
+      $(this).html('current mode: free draw')
+      canvas.isDrawingMode = true
+    }
+  })
+</script>
+
+</body>
+</html>
